@@ -1,4 +1,5 @@
 #pragma once
+#include "SimpleEngineCore/Event.hpp"
 #include <memory>
 
 namespace SimpleEngine {
@@ -19,5 +20,8 @@ namespace SimpleEngine {
 
     private:
         std::unique_ptr<class Window> m_pWindow; //!!!!!!!!! Класс Window неизвестен, поэтому пишем class Window
+
+        EventDispatcher m_event_dispatcher;
+        bool m_bCloseWindow = false;
     };
 }
