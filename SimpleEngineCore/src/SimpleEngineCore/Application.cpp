@@ -49,7 +49,7 @@ namespace SimpleEngine {
     }
 
     void Application::on_update() {
-
+        //
     }
 
     Application::~Application() {
