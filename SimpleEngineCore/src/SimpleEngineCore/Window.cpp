@@ -1,6 +1,7 @@
 #include "SimpleEngineCore/Window.hpp"
 #include "SimpleEngineCore/Rendering/OpenGL/ShaderProgram.hpp"
 #include "SimpleEngineCore/Rendering/OpenGL/VertexBuffer.hpp"
+#include "SimpleEngineCore/Rendering/OpenGL/VertexArray.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -27,7 +28,8 @@ namespace SimpleEngine {
     std::unique_ptr<ShaderProgram> p_shader_program;
     std::unique_ptr<VertexBuffer> p_points_vbo;
     std::unique_ptr<VertexBuffer> p_colors_vbo;
-    GLuint vao;
+    std::unique_ptr<VertexArray> p_vao;
+    //GLuint vao;
 
     //Шейдкры пишутся на языке ява селл
     const char* vertex_shader =
@@ -69,7 +71,8 @@ namespace SimpleEngine {
         //Отрисовка треугольника
         p_shader_program->bind();
         //glUseProgram(shader_program);
-        glBindVertexArray(vao);
+        //glBindVertexArray(vao);
+        p_vao->bind();
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
 
@@ -208,18 +211,22 @@ namespace SimpleEngine {
 
         p_colors_vbo = std::make_unique<VertexBuffer>(colors, sizeof(colors));
 
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
+        //glGenVertexArrays(1, &vao);
+        //glBindVertexArray(vao);
 
-        glEnableVertexAttribArray(0);
-        //glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-        p_points_vbo->bind();
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+        //glEnableVertexAttribArray(0);
+        ////glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+        //p_points_vbo->bind();
+        //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);//Привязываем к layout(location = 0)
 
-        glEnableVertexAttribArray(1);
-        //glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
-        p_colors_vbo->bind();
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+        //glEnableVertexAttribArray(1);
+        ////glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
+        //p_colors_vbo->bind();
+        //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);//Привязываем к layout(location = 1)
+
+        p_vao = std::make_unique<VertexArray>();
+        p_vao->add_buffer(*p_points_vbo);
+        p_vao->add_buffer(*p_colors_vbo);
 
         return 0;
     }
