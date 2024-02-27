@@ -1,4 +1,5 @@
 #include "SimpleEngineCore/Window.hpp"
+#include "SimpleEngineCore/Rendering/OpenGL/ShaderProgram.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -22,7 +23,8 @@ namespace SimpleEngine {
         0.0f, 0.0f, 1.0f
     };
 
-    GLuint shader_program;
+    //GLuint shader_program;
+    std::unique_ptr<ShaderProgram> p_shader_program;
     GLuint vao;
 
     //Шейдкры пишутся на языке ява селл
@@ -63,7 +65,8 @@ namespace SimpleEngine {
         glClear(GL_COLOR_BUFFER_BIT);
 
         //Отрисовка треугольника
-        glUseProgram(shader_program);
+        p_shader_program->bind();
+        //glUseProgram(shader_program);
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -169,7 +172,11 @@ namespace SimpleEngine {
                 glViewport(0, 0, width, height);
             });
 
-        GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+        p_shader_program = std::make_unique<ShaderProgram>(vertex_shader, fragment_shader);
+        if (!p_shader_program->isCompiled())
+            return false;
+
+        /*GLuint vs = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vs, 1, &vertex_shader, nullptr);
         glCompileShader(vs);
 
@@ -183,7 +190,7 @@ namespace SimpleEngine {
         glLinkProgram(shader_program);
 
         glDeleteShader(vs);
-        glDeleteShader(fs);
+        glDeleteShader(fs);*/
 
         GLuint points_vbo = 0;
         glGenBuffers(1, &points_vbo);

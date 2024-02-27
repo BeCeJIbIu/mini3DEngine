@@ -16,7 +16,7 @@ namespace SimpleEngine {
 
         m_event_dispatcher.add_event_listener<EventMouseMoved>(
             [](EventMouseMoved& event) {
-                std::cout << "[EVENT] Mouse Moved to " << event.x << "x" << event.y << "\n";
+                //std::cout << "[EVENT] Mouse Moved to " << event.x << "x" << event.y << "\n";
             }
         );
 
