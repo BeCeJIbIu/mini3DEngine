@@ -51,6 +51,10 @@ target_link_libraries(${ENGINE_PROJECT_NAME} PRIVATE glfw)
 
 add_subdirectory(../external/glad ${CMAKE_CURRENT_BINARY_DIR}/glad)
 target_link_libraries(${ENGINE_PROJECT_NAME} PRIVATE glad)
+
+add_subdirectory(../external/glm ${CMAKE_CURRENT_BINARY_DIR}/glm)
+target_link_libraries(${ENGINE_PROJECT_NAME} PRIVATE glm)
+
 #Прописываем имена заголовков, includ'ов, задаём имя IMGUI_INCLUDES
 set(IMGUI_INCLUDES
 	../external/imgui/imgui.h
