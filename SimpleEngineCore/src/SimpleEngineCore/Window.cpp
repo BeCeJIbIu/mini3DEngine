@@ -2,6 +2,7 @@
 #include "SimpleEngineCore/Rendering/OpenGL/ShaderProgram.hpp"
 #include "SimpleEngineCore/Rendering/OpenGL/VertexBuffer.hpp"
 #include "SimpleEngineCore/Rendering/OpenGL/VertexArray.hpp"
+#include "SimpleEngineCore/Rendering/OpenGL/IndexBuffer.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -13,31 +14,26 @@ namespace SimpleEngine {
 
     static bool s_GLFW_initialized = false;
 
-    GLfloat points[] = {
-         0.0f,  0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
-        -0.5f, -0.5f, 0.0f
+    //GLfloat positions_colors[] = {
+    //    -0.5f, -0.5f, 0.0f,     1.0f, 0.0f, 0.0f,
+    //     0.5f, -0.5f, 0.0f,     0.0f, 1.0f, 0.0f,
+    //    -0.5f,  0.5f, 0.0f,     0.0f, 0.0f, 1.0f,
+
+    //     0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,
+    //    -0.5f,  0.5f, 0.0f,     0.0f, 1.0f, 0.0f,
+    //     0.5f, -0.5f, 0.0f,     0.0f, 0.0f, 1.0f
+    //};
+
+    GLfloat positions_colors2[] = {
+        -0.5f, -0.5f, 0.0f,     1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f, 0.0f,     0.0f, 1.0f, 0.0f,
+        -0.5f,  0.5f, 0.0f,     0.0f, 0.0f, 1.0f,
+         0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f
     };
 
-    GLfloat colors[] = {
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f
+    GLuint indexes[] = {
+        0, 1, 2, 3, 2, 1
     };
-
-    GLfloat positions_colors[] = {
-         0.0f,  0.5f, 0.0f,     1.0f, 1.0f, 0.0f,
-         0.5f, -0.5f, 0.0f,     0.0f, 1.0f, 1.0f,
-        -0.5f, -0.5f, 0.0f,     1.0f, 0.0f, 1.0f
-    };
-
-    std::unique_ptr<ShaderProgram> p_shader_program;
-    std::unique_ptr<VertexBuffer> p_points_vbo;
-    std::unique_ptr<VertexBuffer> p_colors_vbo;
-    std::unique_ptr<VertexArray> p_vao_2buffers;
-    //GLuint vao;
-    std::unique_ptr<VertexBuffer> p_positions_colors_vbo;
-    std::unique_ptr<VertexArray> p_vao_1buffer;
 
     //Шейдкры пишутся на языке ява селл
     const char* vertex_shader =
@@ -58,6 +54,11 @@ namespace SimpleEngine {
         "    frag_color = vec4(color, 1.0);"
         "}";
 
+    std::unique_ptr<ShaderProgram> p_shader_program;
+    std::unique_ptr<VertexBuffer> p_positions_colors_vbo;
+    std::unique_ptr<IndexBuffer> p_index_buffer;
+    std::unique_ptr<VertexArray> p_vao;
+
     Window::Window(std::string title, const unsigned int width, const unsigned int height)
         : m_data({ std::move(title), width, height }) {
 
@@ -76,8 +77,6 @@ namespace SimpleEngine {
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        p_shader_program->bind();//Отрисовка треугольника
-
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize.x = static_cast<float>(get_width());
         io.DisplaySize.y = static_cast<float>(get_height());
@@ -90,14 +89,15 @@ namespace SimpleEngine {
         ImGui::Begin("Background Color Window");
         ImGui::ColorEdit4("Background Color", m_background_color);
 
-        static bool use_2_buffers = true;
-        ImGui::Checkbox("2 Buffers", &use_2_buffers);
-        if (use_2_buffers)
-            p_vao_2buffers->bind();//Для 2 буферов
-        else
-            p_vao_1buffer->bind();//Для 1 буфера
+        //static bool use_2_buffers = true;
+        //ImGui::Checkbox("2 Buffers", &use_2_buffers);
+        //if (use_2_buffers)
+        //    p_vao_2buffers->bind();//Для 2 буферов
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);//Отрисовка треугольника
+        p_shader_program->bind();
+        p_vao->bind();
+        //glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(p_vao->get_indexes_count()), GL_UNSIGNED_INT, nullptr);
 
         ImGui::End();
 
@@ -123,7 +123,6 @@ namespace SimpleEngine {
             }
             s_GLFW_initialized = true;
         }
-        
 
         /* Create a windowed mode window and its OpenGL context */
         m_pWindow = glfwCreateWindow(m_data.width, m_data.height, m_data.title.c_str(), nullptr, nullptr);
@@ -180,7 +179,6 @@ namespace SimpleEngine {
                 data.eventCallbackFn(event);
             });
 
-        //Рисуем треугольник
         glfwSetFramebufferSizeCallback(m_pWindow,
             [](GLFWwindow* pWindow, int width, int height) {
 
@@ -196,25 +194,18 @@ namespace SimpleEngine {
             ShaderDataType::Float3
         };
 
-        p_vao_2buffers = std::make_unique<VertexArray>();
-        p_points_vbo = std::make_unique<VertexBuffer>(points, sizeof(points), buffer_layout_1vec3);
-        p_colors_vbo = std::make_unique<VertexBuffer>(colors, sizeof(colors), buffer_layout_1vec3);
-
-        p_vao_2buffers->add_buffer(*p_points_vbo);
-        p_vao_2buffers->add_buffer(*p_colors_vbo);
-
-
-
         BufferLayout buffer_layout_2vec3 {
 
             ShaderDataType::Float3,
             ShaderDataType::Float3
         };
 
-        p_vao_1buffer = std::make_unique<VertexArray>();
-        p_positions_colors_vbo = std::make_unique<VertexBuffer>(positions_colors, sizeof(positions_colors), buffer_layout_2vec3);
+        p_vao = std::make_unique<VertexArray>();
+        p_positions_colors_vbo = std::make_unique<VertexBuffer>(positions_colors2, sizeof(positions_colors2), buffer_layout_2vec3);
+        p_index_buffer = std::make_unique<IndexBuffer>(indexes, sizeof(indexes) / sizeof(GLuint));
         
-        p_vao_1buffer->add_buffer(*p_positions_colors_vbo);//Для 1 буферa
+        p_vao->add_vertex_buffer(*p_positions_colors_vbo);
+        p_vao->set_index_buffer(*p_index_buffer);
 
         return 0;
     }
