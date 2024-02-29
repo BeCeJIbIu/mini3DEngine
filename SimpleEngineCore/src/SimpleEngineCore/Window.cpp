@@ -122,8 +122,6 @@ namespace SimpleEngine {
                 Renderer_OpenGL::set_viewport(width, height);
             });
 
-        
-
         return 0;
     }
 

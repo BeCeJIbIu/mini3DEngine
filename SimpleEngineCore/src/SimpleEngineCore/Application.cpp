@@ -24,10 +24,10 @@
 namespace SimpleEngine {
 
     GLfloat positions_colors2[] = {
-        -0.5f, -0.5f, 0.0f,     1.0f, 0.0f, 0.0f,
-         0.5f, -0.5f, 0.0f,     0.0f, 1.0f, 0.0f,
-        -0.5f,  0.5f, 0.0f,     0.0f, 0.0f, 1.0f,
-         0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f
+       0.0f, -0.5f, -0.5f,     1.0f, 0.0f, 0.0f,
+       0.0f,  0.5f, -0.5f,     0.0f, 1.0f, 0.0f,
+       0.0f, -0.5f,  0.5f,     0.0f, 0.0f, 1.0f,
+       0.0f,  0.5f,  0.5f,     1.0f, 0.0f, 0.0f
     };
 
     GLuint indexes[] = {
@@ -96,15 +96,17 @@ namespace SimpleEngine {
         );
 
         m_event_dispatcher.add_event_listener<EventKeyPressed>(
-            [](EventKeyPressed& event) {//&&&&&&&&&&&&&&&&&&&
-                std::cout << "[EventKeyPressed]: " << (char)event.key_code << "\n";
+            [&](EventKeyPressed& event) {//&&&&&&&&&&&&&&&&&&&
+                if (event.key_code <= KeyCode::KEY_Z)
+                    std::cout << "[EventKeyPressed]: " << static_cast<char>(event.key_code) << "\n";
                 Input::PressKey(event.key_code);
             }
         );
 
         m_event_dispatcher.add_event_listener<EventKeyReleased>(
-            [](EventKeyReleased& event) {//&&&&&&&&&&&&&&&&&&&
-                std::cout << "[EventKeyReleased]: " << (char)event.key_code << "\n";
+            [&](EventKeyReleased& event) {//&&&&&&&&&&&&&&&&&&&
+                if (event.key_code <= KeyCode::KEY_Z)
+                    std::cout << "[EventKeyReleased]: " << static_cast<char>(event.key_code) << "\n";
                 Input::ReleaseKey(event.key_code);
             }
         );
@@ -170,8 +172,7 @@ namespace SimpleEngine {
             glm::mat4 model_matrix = translate_matrix * rotate_matrix * scale_matrix;
             p_shader_program->setMatrix4("model_matrix", model_matrix);
 
-            camera.set_position_rotation(glm::vec3(camera_position[0], camera_position[1], camera_position[2]),
-                glm::vec3(camera_rotation[0], camera_rotation[1], camera_rotation[2]));
+            //camera.set_position_rotation(glm::vec3(camera_position[0], camera_position[1], camera_position[2]), glm::vec3(camera_rotation[0], camera_rotation[1], camera_rotation[2]));
             camera.set_projection_mode(perspective_camera ? Camera::ProjectionMode::Perspective : Camera::ProjectionMode::Orthographic);
             p_shader_program->setMatrix4("view_projection_matrix", camera.get_projection_matrix() * camera.get_view_matrix());
 
@@ -185,15 +186,15 @@ namespace SimpleEngine {
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
             //ImGui::ShowDemoWindow();
-            ImGui::Begin("Background Color Window");
-            ImGui::ColorEdit4("Background Color", m_background_color);
-            ImGui::SliderFloat3("scale", scale, 0.f, 2.f);
-            ImGui::SliderFloat("rotate", &rotate, 0.f, 360.f);
-            ImGui::SliderFloat3("translate", translate, -1.f, 1.f);
-            ImGui::SliderFloat3("camera position", camera_position, -10.f, 10.f);
-            ImGui::SliderFloat3("camera rotation", camera_rotation, 0, 360.f);
-            ImGui::Checkbox("Perspective camera", &perspective_camera);
-            ImGui::End();
+            //ImGui::Begin("Background Color Window");
+            //ImGui::ColorEdit4("Background Color", m_background_color);
+            //ImGui::SliderFloat3("scale", scale, 0.f, 2.f);
+            //ImGui::SliderFloat("rotate", &rotate, 0.f, 360.f);
+            //ImGui::SliderFloat3("translate", translate, -1.f, 1.f);
+            //ImGui::SliderFloat3("camera position", camera_position, -10.f, 10.f);
+            //ImGui::SliderFloat3("camera rotation", camera_rotation, 0, 360.f);
+            //ImGui::Checkbox("Perspective camera", &perspective_camera);
+            //ImGui::End();
             //****************************************************//
 
             on_ui_draw();
