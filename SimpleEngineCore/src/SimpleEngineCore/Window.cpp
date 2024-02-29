@@ -3,7 +3,9 @@
 #include "SimpleEngineCore/Rendering/OpenGL/VertexBuffer.hpp"
 #include "SimpleEngineCore/Rendering/OpenGL/VertexArray.hpp"
 #include "SimpleEngineCore/Rendering/OpenGL/IndexBuffer.hpp"
-#include <glad/glad.h>
+#include "SimpleEngineCore/Camera.hpp"
+#include "SimpleEngineCore/Rendering/OpenGL/Renderer_OpenGL.hpp"
+
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <imgui/imgui.h>
@@ -14,18 +16,6 @@
 #include <glm/trigonometric.hpp>
 
 namespace SimpleEngine {
-
-    static bool s_GLFW_initialized = false;
-
-    //GLfloat positions_colors[] = {
-    //    -0.5f, -0.5f, 0.0f,     1.0f, 0.0f, 0.0f,
-    //     0.5f, -0.5f, 0.0f,     0.0f, 1.0f, 0.0f,
-    //    -0.5f,  0.5f, 0.0f,     0.0f, 0.0f, 1.0f,
-
-    //     0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,
-    //    -0.5f,  0.5f, 0.0f,     0.0f, 1.0f, 0.0f,
-    //     0.5f, -0.5f, 0.0f,     0.0f, 0.0f, 1.0f
-    //};
 
     GLfloat positions_colors2[] = {
         -0.5f, -0.5f, 0.0f,     1.0f, 0.0f, 0.0f,
@@ -38,33 +28,18 @@ namespace SimpleEngine {
         0, 1, 2, 3, 2, 1
     };
 
-    //Шейдкры пишутся на языке ява селл
-    //const char* vertex_shader =
-    //    R"(#version 460
-    //    layout(location = 0) in vec3 vertex_position;
-    //    layout(location = 1) in vec3 vertex_color;
-    //    #Для трансформации
-    //    uniform mat4 scale_matrix;
-    //    #Для поворота
-    //    uniform mat4 rotate_matrix;
-    //    #Для перемещения
-    //    uniform mat4 translate_matrix;
-    //    out vec3 color;
-    //    void main() {
-    //        color = vertex_color;
-    //        gl_Position = translate_matrix * rotate_matrix * scale_matrix * vec4(vertex_position, 1.0);
-    //    })";
-
     const char* vertex_shader =
         R"(#version 460
         layout(location = 0) in vec3 vertex_position;
         layout(location = 1) in vec3 vertex_color;
         #Общая матрица для всех типов изменения объекта
         uniform mat4 model_matrix;
+        #Передаём параметры камеры
+        uniform mat4 view_projection_matrix;
         out vec3 color;
         void main() {
             color = vertex_color;
-            gl_Position = model_matrix * vec4(vertex_position, 1.0);
+            gl_Position = view_projection_matrix * model_matrix * vec4(vertex_position, 1.0);
         })";
 
     const char* fragment_shader =
@@ -82,7 +57,12 @@ namespace SimpleEngine {
 
     float scale[3] = { 1.f, 1.f, 1.f };
     float rotate = 0.f;
-    float translate[3] = { 0.f, 0.f, 1.f };
+    float translate[3] = { 0.f, 0.f, 0.f };
+
+    float camera_position[3] = { 0.f, 0.f, 1.f };
+    float camera_rotation[3] = { 0.f, 0.f, 0.f };
+    bool perspective_camera = false;
+    Camera camera;
 
     Window::Window(std::string title, const unsigned int width, const unsigned int height)
         : m_data({ std::move(title), width, height }) {
@@ -97,10 +77,11 @@ namespace SimpleEngine {
 
     void Window::on_update() {
 
-        glClearColor(m_background_color[0], m_background_color[1], m_background_color[2], m_background_color[3]);
-
-        /* Render here */
-        glClear(GL_COLOR_BUFFER_BIT);
+        Renderer_OpenGL::set_clear_color(m_background_color[0],
+                                         m_background_color[1],
+                                         m_background_color[2],
+                                         m_background_color[3]);
+        Renderer_OpenGL::clear();
 
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize.x = static_cast<float>(get_width());
@@ -117,10 +98,9 @@ namespace SimpleEngine {
         ImGui::SliderFloat("rotate", &rotate, 0.f, 360.f);
         ImGui::SliderFloat3("translate", translate, -1.f, 1.f);
 
-        //static bool use_2_buffers = true;
-        //ImGui::Checkbox("2 Buffers", &use_2_buffers);
-        //if (use_2_buffers)
-        //    p_vao_2buffers->bind();//Для 2 буферов
+        ImGui::SliderFloat3("camera position", camera_position, -10.f, 10.f);
+        ImGui::SliderFloat3("camera rotation", camera_rotation, 0, 360.f);
+        ImGui::Checkbox("Perspective camera", &perspective_camera);
 
         p_shader_program->bind();
 
@@ -147,9 +127,12 @@ namespace SimpleEngine {
         glm::mat4 model_matrix = translate_matrix * rotate_matrix * scale_matrix;
         p_shader_program->setMatrix4("model_matrix", model_matrix);
 
-        p_vao->bind();
-        //glDrawArrays(GL_TRIANGLES, 0, 6);
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(p_vao->get_indexes_count()), GL_UNSIGNED_INT, nullptr);
+        camera.set_position_rotation(glm::vec3(camera_position[0], camera_position[1], camera_position[2]),
+                                     glm::vec3(camera_rotation[0], camera_rotation[1], camera_rotation[2]));
+        camera.set_projection_mode(perspective_camera ? Camera::ProjectionMode::Perspective : Camera::ProjectionMode::Orthographic);
+        p_shader_program->setMatrix4("view_projection_matrix", camera.get_projection_matrix() * camera.get_view_matrix());
+
+        Renderer_OpenGL::draw(*p_vao);
 
         ImGui::End();
 
@@ -167,30 +150,27 @@ namespace SimpleEngine {
 
         std::cout << " Window::init()\n";
 
-        /* Initialize the library */
-        if (!s_GLFW_initialized) {
-            if (!glfwInit()) {
-                std::cerr << "Can't initialize GLFW!\n";
-                return -1;
-            }
-            s_GLFW_initialized = true;
+        glfwSetErrorCallback([](int error_code, const char* description) {
+
+                std::cerr << "GLFW error: " << description << "\n";
+            });
+
+        if (!glfwInit()) {
+            std::cerr << "Can't initialize GLFW!\n";
+            return -1;
         }
 
         /* Create a windowed mode window and its OpenGL context */
         m_pWindow = glfwCreateWindow(m_data.width, m_data.height, m_data.title.c_str(), nullptr, nullptr);
-        if (!m_pWindow)
-        {
+        if (!m_pWindow) {
+
             std::cerr << "Can't create WINDOW!\n";
-            glfwTerminate();
             return -2;
         }
 
-        /* Make the window's context current */
-        glfwMakeContextCurrent(m_pWindow);
+        if (!Renderer_OpenGL::init(m_pWindow)) {
 
-        //Инициализируем ГЛАД
-        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-            std::cerr << "Failed to initialize GLAD" << "\n";
+            std::cerr << "Failed to initialize Renderer_OpenGL" << "\n";
             return -3;
         }
 
@@ -207,7 +187,6 @@ namespace SimpleEngine {
                 WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(pWindow));
                 data.width = width;
                 data.height = height;
-
                 EventWindowResize event(width, height);
                 data.eventCallbackFn(event);
             }
@@ -217,7 +196,6 @@ namespace SimpleEngine {
             [](GLFWwindow* pWindow, double x, double y) {
 
                 WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(pWindow));
-
                 EventMouseMoved event(x, y);
                 data.eventCallbackFn(event);
             });
@@ -226,7 +204,6 @@ namespace SimpleEngine {
             [](GLFWwindow* pWindow) {
 
                 WindowData& data = *static_cast<WindowData*>(glfwGetWindowUserPointer(pWindow));
-
                 EventWindowClose event;
                 data.eventCallbackFn(event);
             });
@@ -234,7 +211,7 @@ namespace SimpleEngine {
         glfwSetFramebufferSizeCallback(m_pWindow,
             [](GLFWwindow* pWindow, int width, int height) {
 
-                glViewport(0, 0, width, height);
+                Renderer_OpenGL::set_viewport(width, height);
             });
 
         p_shader_program = std::make_unique<ShaderProgram>(vertex_shader, fragment_shader);
@@ -263,6 +240,10 @@ namespace SimpleEngine {
     }
 
     void Window::shutdown() {
+
+        if (ImGui::GetCurrentContext())
+            ImGui::DestroyContext();
+
         glfwDestroyWindow(m_pWindow);
         glfwTerminate();
     }
