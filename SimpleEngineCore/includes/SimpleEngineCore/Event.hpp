@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <array>
+#include "Keys.hpp"
 
 namespace SimpleEngine {
 
@@ -87,5 +88,35 @@ namespace SimpleEngine {
 		virtual EventType get_type() const override { return type; }
 
 		static const EventType type = EventType::WindowClose;
+	};
+
+	struct EventKeyPressed : public BaseEvent {
+
+		EventKeyPressed(const KeyCode key_code, const bool repeated)
+			: key_code(key_code)
+			, repeated(repeated) {
+
+
+		}
+		virtual EventType get_type() const override { return type; }
+
+		KeyCode key_code;
+		bool repeated;
+
+		static const EventType type = EventType::KeyPressed;
+	};
+
+	struct EventKeyReleased : public BaseEvent {
+
+		EventKeyReleased(const KeyCode key_code)
+			: key_code(key_code) {
+
+
+		}
+		virtual EventType get_type() const override { return type; }
+
+		KeyCode key_code;
+
+		static const EventType type = EventType::KeyReleased;
 	};
 }
